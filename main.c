@@ -123,6 +123,25 @@ void CPU_execute(CPU* cpu) {
 			cpu->pc_ += 4;
 			break;
 		}
+		case 0x37: { // LUI (U-Format)
+			if (rd != 0)
+				cpu->regfile_[rd] = instruction & 0xFFFFF000;
+			cpu->pc_ += 4;
+			break;
+		}
+		case 0x23: {
+			// SB (S-Format, funct3 == 0)
+			uint32_t rs2 = (instruction >> 20) & 0x1F;
+			uint32_t imm_lo = (instruction >> 7) & 0x1F; // imm[4:0]
+			uint32_t imm_hi = (instruction >> 25) & 0x7F; // imm[11:5]
+			uint32_t imm_u = (imm_hi << 5) | imm_lo;
+			int32_t imm = (imm_u & 0x800) ? (int32_t)(imm_u | 0xFFFFF000)
+			: (int32_t)imm_u;
+			CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,
+			(uint8_t)cpu->regfile_[rs2]);
+			cpu->pc_ += 4;
+			break;
+		}
 
 		default:
 			// Unbekannter Befehl: pc bleibt stehen -> Programm haelt an
