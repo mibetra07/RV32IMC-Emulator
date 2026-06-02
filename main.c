@@ -176,7 +176,7 @@ void CPU_execute(CPU* cpu) {
 			cpu->pc_ += 4;
 			break;
 		}
-		case 0x13: { //ADDI (I-Format)
+		case 0x13: { //(I-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
@@ -189,15 +189,21 @@ void CPU_execute(CPU* cpu) {
 					cpu->regfile_[rd] = cpu->regfile_[rs1] + imm; //rd = rs1 + imm
 				}
 				case 0x1: { //SLLI
-
+					cpu->regfile_[rd] = cpu->regfile_[rs1] << (imm & 0x1F); //write rs1 << imm(lowest 5 bits) into rd
 					break;
 				}
 				case 0x2: { //SLTI
-
+					if ((int32_t)(cpu->regfile_[rs1]) < imm) //if rs1 < imm (signed)
+						cpu->regfile_[rd] = 0x1; //rd=1
+					else
+						cpu->regfile_[rd] = 0x0; //rd=0
 					break;
 				}
 				case 0x3: { //SLTIU
-
+					if (cpu->regfile_[rs1] < (uint32_t)(imm)) //if rs1 < imm (unsigned)
+						cpu->regfile_[rd] = 0x1; //rd=1
+					else
+						cpu->regfile_[rd] = 0x0; //rd=0
 					break;
 				}
 				case 0x4: { //XORI
@@ -210,6 +216,17 @@ void CPU_execute(CPU* cpu) {
 				}
 				case 0x6: { //SRLI/SRAI
 					uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
+					switch (funct7) {
+						case 0x0: { //SRLI
+
+							break;
+						}
+						case 0x20: { //SRAI
+
+							break;
+						}
+					default: break;
+					}
 					break;
 				}
 				case 0x7: { //ANDI
