@@ -101,36 +101,136 @@ void CPU_store_byte(CPU* cpu, uint32_t addr, uint8_t value) {
 void CPU_execute(CPU* cpu) {
 
 	uint32_t instruction = *(uint32_t*)(cpu->instr_mem_ + (cpu->pc_  & 0xFFFFF));
-
 	uint32_t opcode = instruction & 0x7F;
-	uint32_t rd = (instruction >> 7) & 0x1F; //register destination
-	uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-
-	// TODO
-	//
-	// Hinweis zur Zeichenausgabe: Verwenden Sie fuer den Befehl SB die bereits
-	// vorgegebene Funktion CPU_store_byte(). So erscheinen Schreibzugriffe auf
-	// die Adresse 0x5000 als Zeichenausgabe auf dem Terminal.
 
 	switch (opcode) {
-		case 0x13: { //ADDI (I-Format, funct3 == 0)
-			//12-Bit-Immediate aus den Bits 31:20 herausschneiden
-			uint32_t imm_u = (instruction >> 20) & 0xFFF;
-			//Vorzeichenerweiterung von 12 auf 32 Bit
-			int32_t imm = (int32_t)instruction >> 20;
-			if (rd != 0) //wenn nicht r[0] --> schreibgeschützt
-				cpu->regfile_[rd] = cpu->regfile_[rs1] + imm; //schreibe rs1 + imm in rd
+		case 0x33: { //(R-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t rs2 = (instruction >> 20) & 0x1F;
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
+
+			if (rd != 0) //if not r[0] -> read-only
+				switch (funct3) {
+				case 0x0: { //ADD/SUB
+					switch (funct7) {
+						case 0x0: { //ADD
+							cpu->regfile_[rd] = cpu->regfile_[rs1] + cpu->regfile_[rs2]; //schreibe rs1 + rs2 in rd
+							break;
+						}
+						case 0x20: { //SUB
+							cpu->regfile_[rd] = cpu->regfile_[rs1] - cpu->regfile_[rs2]; //schreibe rs1 - rs2 in rd
+							break;
+						}
+						default: break;
+					}
+					break;
+				}
+				case 0x1: { //SLL
+					cpu->regfile_[rd] = cpu->regfile_[rs1] << (cpu->regfile_[rs2] & 0x1F); //schreibe rs1 << rs2(unterste 5 bits) in rd
+					break;
+				}
+				case 0x2: { //SLT
+					if ((int32_t)(cpu->regfile_[rs1]) < (int32_t)(cpu->regfile_[rs2])) //if rs1 < rs2 (signed)
+						cpu->regfile_[rd] = 0x1; //rd=1
+					else
+						cpu->regfile_[rd] = 0x0; //rd=0
+					break;
+				}
+				case 0x3: { //SLTU
+					if (cpu->regfile_[rs1] < cpu->regfile_[rs2]) //if rs1 < rs2 (unsigned)
+						cpu->regfile_[rd] = 0x1; //rd=1
+					else
+						cpu->regfile_[rd] = 0x0; //rd=0
+					break;
+				}
+				case 0x4: { //XOR
+					cpu->regfile_[rd] = cpu->regfile_[rs1] ^ cpu->regfile_[rs2]; //rd = rs1 ^ rs2
+					break;
+				}
+				case 0x5: { //SRL/SRA
+					switch (funct7) {
+						case 0x0: { //SRL
+							cpu->regfile_[rd] = cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F); //logically shift rs1 right rs2(5 lowest bits)
+							break;
+						}
+						case 0x20: { //SRA
+							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F)); //arithmatically shift rs1 right by rs2(5 lowest bits)
+							break;
+						}
+						default: break;
+					}
+					break;
+				}
+				case 0x6: { //OR
+					cpu->regfile_[rd] = cpu->regfile_[rs1] | cpu->regfile_[rs2]; //rd = rs1 | rs2
+					break;
+				}
+				case 0x7: { //AND
+					cpu->regfile_[rd] = cpu->regfile_[rs1] & cpu->regfile_[rs2]; //rd = rs1 & rs2
+					break;
+				}
+				default: break;
+				}
 			cpu->pc_ += 4;
 			break;
 		}
+		case 0x13: { //ADDI (I-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			uint32_t imm_u = (instruction >> 20) & 0xFFF; //12 bit immediate
+			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+
+			if (rd != 0) //if not r[0] -> read-only
+				switch (funct3) {
+				case 0x0: { //ADDI
+					cpu->regfile_[rd] = cpu->regfile_[rs1] + imm; //rd = rs1 + imm
+				}
+				case 0x1: { //SLLI
+
+					break;
+				}
+				case 0x2: { //SLTI
+
+					break;
+				}
+				case 0x3: { //SLTIU
+
+					break;
+				}
+				case 0x4: { //XORI
+					cpu->regfile_[rd] = cpu->regfile_[rs1] ^ imm; //rd = rs1 ^ imm
+					break;
+				}
+				case 0x5: { //ORI
+					cpu->regfile_[rd] = cpu->regfile_[rs1] | imm; //rd = rs1 | imm
+					break;
+				}
+				case 0x6: { //SRLI/SRAI
+					uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
+					break;
+				}
+				case 0x7: { //ANDI
+					cpu->regfile_[rd] = cpu->regfile_[rs1] & imm; //rd = rs1 & imm
+					break;
+				}
+				default: break;
+				}
+
+			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
+			break;
+		}
 		case 0x37: { // LUI (U-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			if (rd != 0)
 				cpu->regfile_[rd] = instruction & 0xFFFFF000;
 			cpu->pc_ += 4;
 			break;
 		}
-		case 0x23: {
-			// SB (S-Format, funct3 == 0)
+		case 0x23: { // SB (S-Format, funct3 == 0)
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			uint32_t rs2 = (instruction >> 20) & 0x1F;
 			uint32_t imm_lo = (instruction >> 7) & 0x1F; // imm[4:0]
 			uint32_t imm_hi = (instruction >> 25) & 0x7F; // imm[11:5]
@@ -142,7 +242,6 @@ void CPU_execute(CPU* cpu) {
 			cpu->pc_ += 4;
 			break;
 		}
-
 		default:
 			// Unbekannter Befehl: pc bleibt stehen -> Programm haelt an
 			break;
