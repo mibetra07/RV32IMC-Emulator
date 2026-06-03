@@ -107,7 +107,7 @@ void CPU_execute(CPU* cpu) {
 		case 0x33: { //(R-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-			uint32_t rs2 = (instruction >> 20) & 0x1F;
+			uint32_t rs2 = (instruction >> 20) & 0x1F; //register source 2
 			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
 			uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
 
@@ -247,7 +247,86 @@ void CPU_execute(CPU* cpu) {
 			cpu->pc_ += 4;
 			break;
 		}
-		case 0x23: { // SB (S-Format, funct3 == 0)
+		case 0x17: { // AUIPC (U-Format)
+
+			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
+			break;
+		}
+		case 0x6F: { //JAL (J-Format)
+
+			break;
+		}
+		case 0x67: { //JALR (R-Format)
+
+			break;
+		}
+		case 0x63: { //(B-Format)
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t rs2 = (instruction >> 20) & 0x1F; //register source 2
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+
+			switch (funct3) {
+				case 0x0: { //BEQ
+
+					break;
+				}
+				case 0x1: { //BNE
+
+					break;
+				}
+				case 0x4: { //BLT
+
+					break;
+				}
+				case 0x5: { //BGE
+
+					break;
+				}
+				case 0x6: { //BLTU
+
+					break;
+				}
+				case 0x7: { //BGEU
+
+					break;
+				}
+			}
+			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
+			break;
+		}
+		case 0x3: { //I-Format
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			uint32_t imm_u = (instruction >> 20) & 0xFFF; //12 bit immediate
+			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+			if (rd != 0)
+				switch (funct3) {
+					case 0x0: { //LB
+
+						break;
+					}
+					case 0x1: { //LH
+
+						break;
+					}
+					case 0x2: { //LW
+
+						break;
+					}
+					case 0x4: { //LBU
+
+						break;
+					}
+					case 0x5: { //LHU
+
+						break;
+					}
+				}
+			break;
+		}
+		case 0x23: {
+			//(S-Format)
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			uint32_t rs2 = (instruction >> 20) & 0x1F;
 			uint32_t imm_lo = (instruction >> 7) & 0x1F; // imm[4:0]
@@ -255,8 +334,21 @@ void CPU_execute(CPU* cpu) {
 			uint32_t imm_u = (imm_hi << 5) | imm_lo;
 			int32_t imm = (imm_u & 0x800) ? (int32_t)(imm_u | 0xFFFFF000)
 			: (int32_t)imm_u;
-			CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,
-			(uint8_t)cpu->regfile_[rs2]);
+			switch (funct3) {
+				case 0x0: { //SB
+					CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,(uint8_t)cpu->regfile_[rs2]);
+					break;
+				}
+				case 0x1: { //SH
+
+					break;
+				}
+				case 0x2: { //SW
+
+					break;
+				}
+				default: break;
+			}
 			cpu->pc_ += 4;
 			break;
 		}
