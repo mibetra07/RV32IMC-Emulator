@@ -156,7 +156,7 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x20: { //SRA
-							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F)); //arithmatically shift rs1 right by rs2(5 lowest bits)
+							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F)); //arithmetically shift rs1 right by rs2(5 lowest bits)
 							break;
 						}
 						default: break;
@@ -187,6 +187,7 @@ void CPU_execute(CPU* cpu) {
 				switch (funct3) {
 				case 0x0: { //ADDI
 					cpu->regfile_[rd] = cpu->regfile_[rs1] + imm; //rd = rs1 + imm
+					break;
 				}
 				case 0x1: { //SLLI
 					cpu->regfile_[rd] = cpu->regfile_[rs1] << (imm & 0x1F); //write rs1 << imm(lowest 5 bits) into rd
@@ -210,23 +211,23 @@ void CPU_execute(CPU* cpu) {
 					cpu->regfile_[rd] = cpu->regfile_[rs1] ^ imm; //rd = rs1 ^ imm
 					break;
 				}
-				case 0x5: { //ORI
-					cpu->regfile_[rd] = cpu->regfile_[rs1] | imm; //rd = rs1 | imm
-					break;
-				}
-				case 0x6: { //SRLI/SRAI
+				case 0x5: { //SRLI/SRAI
 					uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
 					switch (funct7) {
 						case 0x0: { //SRLI
-
+							cpu->regfile_[rd] = cpu->regfile_[rs1] >> (imm & 0x1F); //logically shift rs1 right by imm(5 lowest bits)
 							break;
 						}
 						case 0x20: { //SRAI
-
+							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (imm & 0x1F)); //arithmetically shift rs1 right by imm(5 lowest bits)
 							break;
 						}
-					default: break;
+						default: break;
 					}
+					break;
+				}
+				case 0x6: { //ORI
+					cpu->regfile_[rd] = cpu->regfile_[rs1] | imm; //rd = rs1 | imm
 					break;
 				}
 				case 0x7: { //ANDI
