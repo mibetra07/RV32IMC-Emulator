@@ -255,23 +255,20 @@ void CPU_execute(CPU* cpu) {
 		}
 		case 0x6F: { //JAL (J-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F;
-			uint32_t imm20 = (instruction >> 31);
-			uint32_t imm10_1 = (instruction >> 21) & 0x3FF;
-			uint32_t imm11 = (instruction >> 20) & 0x1;
-			uint32_t imm19_12 = (instruction >> 12) & 0xFF;
-			uint32_t imm_u = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1); //21 bit unsigned immediate
-			int32_t imm = (int32_t)((imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1)) >> 11; //32 bit immediate
+			//21 bit unsigned immediate
+			uint32_t imm_u = ((instruction >> 31) << 20) | //imm 20
+							(((instruction >> 12) & 0xFF) << 12) | //imm 19:12
+							(((instruction >> 20) & 0x1) << 11) | //imm 11
+							(((instruction >> 21) & 0x3FF) << 1); //imm 10:1
+			int32_t imm = (imm_u & 0x100000) ? (int32_t)(imm_u | 0xFFE00000) : (int32_t)imm_u; //extend 21 bit unsigned to 32 bit signed
 
-			if (rd != 0) {
+			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + 4;
-				cpu->pc_ = cpu->pc_ + (int32_t)imm;
-			}
-			else
-				cpu->pc_ += 4; //skip command
+			cpu->pc_ = cpu->pc_ + imm;
 			break;
 		}
 		case 0x67: { //JALR (R-Format)
-
+			
 			break;
 		}
 		case 0x63: { //(B-Format)
