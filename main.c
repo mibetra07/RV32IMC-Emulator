@@ -180,7 +180,6 @@ void CPU_execute(CPU* cpu) {
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
-			uint32_t imm_u = (instruction >> 20) & 0xFFF; //12 bit immediate
 			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
 
 			if (rd != 0) //if not r[0] -> read-only
@@ -201,7 +200,7 @@ void CPU_execute(CPU* cpu) {
 					break;
 				}
 				case 0x3: { //SLTIU
-					if (cpu->regfile_[rs1] < (uint32_t)(imm)) //if rs1 < imm (unsigned)
+					if (cpu->regfile_[rs1] < (uint32_t)imm) //if rs1 < imm (unsigned)
 						cpu->regfile_[rd] = 0x1; //rd=1
 					else
 						cpu->regfile_[rd] = 0x0; //rd=0
@@ -243,17 +242,32 @@ void CPU_execute(CPU* cpu) {
 		case 0x37: { // LUI (U-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			if (rd != 0)
-				cpu->regfile_[rd] = instruction & 0xFFFFF000;
+				cpu->regfile_[rd] = instruction & 0xFFFFF000; //rd = upper 20 bits of imm
 			cpu->pc_ += 4;
 			break;
 		}
 		case 0x17: { // AUIPC (U-Format)
-
-			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			if (rd != 0)
+				cpu->regfile_[rd] = cpu->pc_ + (instruction & 0xFFFFF000); //rd = pc + upper 20 bits of imm
+			cpu->pc_ += 4;
 			break;
 		}
 		case 0x6F: { //JAL (J-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F;
+			uint32_t imm20 = (instruction >> 31);
+			uint32_t imm10_1 = (instruction >> 21) & 0x3FF;
+			uint32_t imm11 = (instruction >> 20) & 0x1;
+			uint32_t imm19_12 = (instruction >> 12) & 0xFF;
+			uint32_t imm_u = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1); //21 bit unsigned immediate
+			int32_t imm = (int32_t)((imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1)) >> 11; //32 bit immediate
 
+			if (rd != 0) {
+				cpu->regfile_[rd] = cpu->pc_ + 4;
+				cpu->pc_ = cpu->pc_ + (int32_t)imm;
+			}
+			else
+				cpu->pc_ += 4; //skip command
 			break;
 		}
 		case 0x67: { //JALR (R-Format)
