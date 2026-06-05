@@ -189,7 +189,7 @@ void CPU_execute(CPU* cpu) {
 					break;
 				}
 				case 0x1: { //SLLI
-					cpu->regfile_[rd] = cpu->regfile_[rs1] << (imm & 0x1F); //write rs1 << imm(lowest 5 bits) into rd
+					cpu->regfile_[rd] = cpu->regfile_[rs1] << (imm & 0x1F); //rd = rs1 << shamt
 					break;
 				}
 				case 0x2: { //SLTI
@@ -214,11 +214,11 @@ void CPU_execute(CPU* cpu) {
 					uint32_t funct7 = (instruction >> 25) & 0x7F; //function 7
 					switch (funct7) {
 						case 0x0: { //SRLI
-							cpu->regfile_[rd] = cpu->regfile_[rs1] >> (imm & 0x1F); //logically shift rs1 right by imm(5 lowest bits)
+							cpu->regfile_[rd] = cpu->regfile_[rs1] >> (imm & 0x1F); //logically shift rs1 right by shamt
 							break;
 						}
 						case 0x20: { //SRAI
-							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (imm & 0x1F)); //arithmetically shift rs1 right by imm(5 lowest bits)
+							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (imm & 0x1F)); //arithmetically shift rs1 right by shamt
 							break;
 						}
 						default: break;
@@ -260,15 +260,19 @@ void CPU_execute(CPU* cpu) {
 							(((instruction >> 12) & 0xFF) << 12) | //imm 19:12
 							(((instruction >> 20) & 0x1) << 11) | //imm 11
 							(((instruction >> 21) & 0x3FF) << 1); //imm 10:1
-			int32_t imm = (imm_u & 0x100000) ? (int32_t)(imm_u | 0xFFE00000) : (int32_t)imm_u; //extend 21 bit unsigned to 32 bit signed
-
+			int32_t imm = (imm_u & 0x100000) ? (int32_t)(imm_u | 0xFFE00000) : (int32_t)imm_u; //signed conversion from 21 to 32 bit
 			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + 4;
-			cpu->pc_ = cpu->pc_ + imm;
+			cpu->pc_ += imm;
 			break;
 		}
-		case 0x67: { //JALR (R-Format)
-			
+		case 0x67: { //JALR (I-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+			if (rd != 0)
+				cpu->regfile_[rd] = cpu->pc_ + 4;
+			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1; //LETZTES BIT WIRKLICH 0?
 			break;
 		}
 		case 0x63: { //(B-Format)
@@ -309,31 +313,32 @@ void CPU_execute(CPU* cpu) {
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
-			uint32_t imm_u = (instruction >> 20) & 0xFFF; //12 bit immediate
 			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
 			if (rd != 0)
 				switch (funct3) {
 					case 0x0: { //LB
-
+						cpu->regfile_[rd] = (int32_t)(int8_t) cpu->data_mem_[cpu->regfile_[rs1] + imm];
 						break;
 					}
 					case 0x1: { //LH
-
+						cpu->regfile_[rd] = (int32_t)(int16_t)*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
 						break;
 					}
 					case 0x2: { //LW
-
+						cpu->regfile_[rd] = *(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
 						break;
 					}
 					case 0x4: { //LBU
-
+						cpu->regfile_[rd] = cpu->data_mem_[cpu->regfile_[rs1] + imm];
 						break;
 					}
 					case 0x5: { //LHU
-
+						cpu->regfile_[rd] = *(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
 						break;
 					}
+					default: break;
 				}
+			cpu->pc_ += 4;
 			break;
 		}
 		case 0x23: {
@@ -345,17 +350,19 @@ void CPU_execute(CPU* cpu) {
 			uint32_t imm_u = (imm_hi << 5) | imm_lo;
 			int32_t imm = (imm_u & 0x800) ? (int32_t)(imm_u | 0xFFFFF000)
 			: (int32_t)imm_u;
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+
 			switch (funct3) {
 				case 0x0: { //SB
 					CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,(uint8_t)cpu->regfile_[rs2]);
 					break;
 				}
 				case 0x1: { //SH
-
+					*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint16_t)cpu->regfile_[rs2];
 					break;
 				}
 				case 0x2: { //SW
-
+					*(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint32_t)cpu->regfile_[rs2];
 					break;
 				}
 				default: break;
