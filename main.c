@@ -277,7 +277,7 @@ void CPU_execute(CPU* cpu) {
 			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
 			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + 4;
-			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1;
+			cpu->pc_ = (cpu->regfile_[rs1] + imm);
 			break;
 		}
 		case 0x23: { //(S-Format)
