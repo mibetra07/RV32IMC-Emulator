@@ -239,6 +239,132 @@ void CPU_execute(CPU* cpu) {
 			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
 			break;
 		}
+		case 0x3: { //I-Format
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+			if (rd != 0)
+				switch (funct3) {
+				case 0x0: { //LB
+					cpu->regfile_[rd] = (int32_t)(int8_t) cpu->data_mem_[cpu->regfile_[rs1] + imm];
+					break;
+				}
+				case 0x1: { //LH
+					cpu->regfile_[rd] = (int32_t)(int16_t)*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
+					break;
+				}
+				case 0x2: { //LW
+					cpu->regfile_[rd] = *(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
+					break;
+				}
+				case 0x4: { //LBU
+					cpu->regfile_[rd] = cpu->data_mem_[cpu->regfile_[rs1] + imm];
+					break;
+				}
+				case 0x5: { //LHU
+					cpu->regfile_[rd] = *(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
+					break;
+				}
+				default: break;
+				}
+			cpu->pc_ += 4;
+			break;
+		}
+		case 0x67: { //JALR (I-Format)
+			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+			if (rd != 0)
+				cpu->regfile_[rd] = cpu->pc_ + 4;
+			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1;
+			break;
+		}
+		case 0x23: { //(S-Format)
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t rs2 = (instruction >> 20) & 0x1F;
+			uint32_t imm_lo = (instruction >> 7) & 0x1F; // imm[4:0]
+			uint32_t imm_hi = (instruction >> 25) & 0x7F; // imm[11:5]
+			uint32_t imm_u = (imm_hi << 5) | imm_lo;
+			int32_t imm = (imm_u & 0x800) ? (int32_t)(imm_u | 0xFFFFF000)
+			: (int32_t)imm_u;
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			switch (funct3) {
+				case 0x0: { //SB
+					CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,(uint8_t)cpu->regfile_[rs2]);
+					break;
+				}
+				case 0x1: { //SH
+					*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint16_t)cpu->regfile_[rs2];
+					break;
+				}
+				case 0x2: { //SW
+					*(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint32_t)cpu->regfile_[rs2];
+					break;
+				}
+				default: break;
+			}
+			cpu->pc_ += 4;
+			break;
+		}
+		case 0x63: { //(B-Format)
+			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
+			uint32_t rs2 = (instruction >> 20) & 0x1F; //register source 2
+			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
+			//12 bit unsigned immediate
+			uint32_t imm_u = ((instruction >> 31) << 12) | //imm 12
+							(((instruction >> 7) & 0x1) << 11) | //imm 11
+							(((instruction >> 25) & 0x3F) << 5) | //imm 10:5
+							(((instruction >> 8) & 0xF) << 1); //imm 4:1
+			int32_t imm = (imm_u & 0x1000) ? (int32_t)(imm_u | 0xFFFFE000) : (int32_t)imm_u; //signed conversion from 12 to 32 bit
+
+			switch (funct3) {
+				case 0x0: { //BEQ
+					if (cpu->regfile_[rs1] == cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				case 0x1: { //BNE
+					if (cpu->regfile_[rs1] != cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				case 0x4: { //BLT
+					if ((int32_t)cpu->regfile_[rs1] < (int32_t)cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				case 0x5: { //BGE
+					if ((int32_t)cpu->regfile_[rs1] >= (int32_t)cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				case 0x6: { //BLTU
+					if (cpu->regfile_[rs1] < cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				case 0x7: { //BGEU
+					if (cpu->regfile_[rs1] >= cpu->regfile_[rs2])
+						cpu->pc_ += imm;
+					else
+						cpu->pc_ += 4;
+					break;
+				}
+				default: break;
+			}
+			break;
+		}
 		case 0x37: { // LUI (U-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			if (rd != 0)
@@ -264,110 +390,6 @@ void CPU_execute(CPU* cpu) {
 			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + 4;
 			cpu->pc_ += imm;
-			break;
-		}
-		case 0x67: { //JALR (I-Format)
-			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
-			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
-			if (rd != 0)
-				cpu->regfile_[rd] = cpu->pc_ + 4;
-			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1; //LETZTES BIT WIRKLICH 0?
-			break;
-		}
-		case 0x63: { //(B-Format)
-			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-			uint32_t rs2 = (instruction >> 20) & 0x1F; //register source 2
-			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
-
-			switch (funct3) {
-				case 0x0: { //BEQ
-
-					break;
-				}
-				case 0x1: { //BNE
-
-					break;
-				}
-				case 0x4: { //BLT
-
-					break;
-				}
-				case 0x5: { //BGE
-
-					break;
-				}
-				case 0x6: { //BLTU
-
-					break;
-				}
-				case 0x7: { //BGEU
-
-					break;
-				}
-			}
-			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
-			break;
-		}
-		case 0x3: { //I-Format
-			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
-			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
-			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
-			if (rd != 0)
-				switch (funct3) {
-					case 0x0: { //LB
-						cpu->regfile_[rd] = (int32_t)(int8_t) cpu->data_mem_[cpu->regfile_[rs1] + imm];
-						break;
-					}
-					case 0x1: { //LH
-						cpu->regfile_[rd] = (int32_t)(int16_t)*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
-						break;
-					}
-					case 0x2: { //LW
-						cpu->regfile_[rd] = *(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
-						break;
-					}
-					case 0x4: { //LBU
-						cpu->regfile_[rd] = cpu->data_mem_[cpu->regfile_[rs1] + imm];
-						break;
-					}
-					case 0x5: { //LHU
-						cpu->regfile_[rd] = *(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm);
-						break;
-					}
-					default: break;
-				}
-			cpu->pc_ += 4;
-			break;
-		}
-		case 0x23: {
-			//(S-Format)
-			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
-			uint32_t rs2 = (instruction >> 20) & 0x1F;
-			uint32_t imm_lo = (instruction >> 7) & 0x1F; // imm[4:0]
-			uint32_t imm_hi = (instruction >> 25) & 0x7F; // imm[11:5]
-			uint32_t imm_u = (imm_hi << 5) | imm_lo;
-			int32_t imm = (imm_u & 0x800) ? (int32_t)(imm_u | 0xFFFFF000)
-			: (int32_t)imm_u;
-			uint32_t funct3 = (instruction >> 12) & 0x7; //function 3
-
-			switch (funct3) {
-				case 0x0: { //SB
-					CPU_store_byte(cpu, cpu->regfile_[rs1] + imm,(uint8_t)cpu->regfile_[rs2]);
-					break;
-				}
-				case 0x1: { //SH
-					*(uint16_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint16_t)cpu->regfile_[rs2];
-					break;
-				}
-				case 0x2: { //SW
-					*(uint32_t*)(cpu->data_mem_ + cpu->regfile_[rs1] + imm) = (uint32_t)cpu->regfile_[rs2];
-					break;
-				}
-				default: break;
-			}
-			cpu->pc_ += 4;
 			break;
 		}
 		default:
