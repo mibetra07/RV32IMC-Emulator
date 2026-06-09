@@ -113,7 +113,7 @@ void CPU_execute(CPU* cpu) {
 
 			if (rd != 0) //if not r[0] -> read-only
 				switch (funct3) {
-				case 0x0: { //ADD/SUB
+				case 0x0: { //ADD/SUB/MUL
 					switch (funct7) {
 						case 0x0: { //ADD
 							cpu->regfile_[rd] = cpu->regfile_[rs1] + cpu->regfile_[rs2]; //schreibe rs1 + rs2 in rd
@@ -123,33 +123,75 @@ void CPU_execute(CPU* cpu) {
 							cpu->regfile_[rd] = cpu->regfile_[rs1] - cpu->regfile_[rs2]; //schreibe rs1 - rs2 in rd
 							break;
 						}
+						case 0x1: { //MUL
+
+							break;
+						}
 						default: break;
 					}
 					break;
 				}
-				case 0x1: { //SLL
-					cpu->regfile_[rd] = cpu->regfile_[rs1] << (cpu->regfile_[rs2] & 0x1F); //schreibe rs1 << rs2(unterste 5 bits) in rd
+				case 0x1: { //SLL/MUL
+					switch (funct7) {
+						case 0x0: { //SLL
+							cpu->regfile_[rd] = cpu->regfile_[rs1] << (cpu->regfile_[rs2] & 0x1F); //schreibe rs1 << rs2(unterste 5 bits) in rd
+							break;
+						}
+						case 0x1: { //MULH
+
+							break;
+						}
+						default: break;
+					}
 					break;
 				}
-				case 0x2: { //SLT
-					if ((int32_t)(cpu->regfile_[rs1]) < (int32_t)(cpu->regfile_[rs2])) //if rs1 < rs2 (signed)
-						cpu->regfile_[rd] = 0x1; //rd=1
-					else
-						cpu->regfile_[rd] = 0x0; //rd=0
+				case 0x2: { //SLT/MULHSU
+					switch (funct7) {
+						case 0x0: { //SLT
+							if ((int32_t)(cpu->regfile_[rs1]) < (int32_t)(cpu->regfile_[rs2])) //if rs1 < rs2 (signed)
+								cpu->regfile_[rd] = 0x1; //rd=1
+							else
+								cpu->regfile_[rd] = 0x0; //rd=0
+							break;
+						}
+						case 0x1: { //MULHSU
+
+							break;
+						}
+						default: break;
+					}
 					break;
 				}
-				case 0x3: { //SLTU
-					if (cpu->regfile_[rs1] < cpu->regfile_[rs2]) //if rs1 < rs2 (unsigned)
-						cpu->regfile_[rd] = 0x1; //rd=1
-					else
-						cpu->regfile_[rd] = 0x0; //rd=0
+				case 0x3: { //SLTU/MULHU
+					switch (funct7) {
+						case 0x0: { //SLTU
+							if (cpu->regfile_[rs1] < cpu->regfile_[rs2]) //if rs1 < rs2 (unsigned)
+								cpu->regfile_[rd] = 0x1; //rd=1
+							else
+								cpu->regfile_[rd] = 0x0; //rd=0
+							break;
+						}
+						case 0x1: { //MULHU
+
+						}
+						default: break;
+					}
 					break;
 				}
-				case 0x4: { //XOR
-					cpu->regfile_[rd] = cpu->regfile_[rs1] ^ cpu->regfile_[rs2]; //rd = rs1 ^ rs2
+				case 0x4: { //XOR/DIV
+					switch (funct7) {
+						case 0x0: { //XOR
+							cpu->regfile_[rd] = cpu->regfile_[rs1] ^ cpu->regfile_[rs2]; //rd = rs1 ^ rs2
+							break;
+						}
+						case 0x1: { //DIV
+
+						}
+						default: break;
+					}
 					break;
 				}
-				case 0x5: { //SRL/SRA
+				case 0x5: { //SRL/SRA/DIVU
 					switch (funct7) {
 						case 0x0: { //SRL
 							cpu->regfile_[rd] = cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F); //logically shift rs1 right rs2(5 lowest bits)
@@ -159,16 +201,40 @@ void CPU_execute(CPU* cpu) {
 							cpu->regfile_[rd] = (uint32_t)((int32_t)cpu->regfile_[rs1] >> (cpu->regfile_[rs2] & 0x1F)); //arithmetically shift rs1 right by rs2(5 lowest bits)
 							break;
 						}
+						case 0x1: { //DIVU
+
+							break;
+						}
 						default: break;
 					}
 					break;
 				}
-				case 0x6: { //OR
-					cpu->regfile_[rd] = cpu->regfile_[rs1] | cpu->regfile_[rs2]; //rd = rs1 | rs2
+				case 0x6: { //OR/REM
+					switch (funct7) {
+						case 0x0: { //OR
+							cpu->regfile_[rd] = cpu->regfile_[rs1] | cpu->regfile_[rs2]; //rd = rs1 | rs2
+							break;
+						}
+						case 0x1: { //REM
+
+							break;
+						}
+						default: break;
+					}
 					break;
 				}
-				case 0x7: { //AND
-					cpu->regfile_[rd] = cpu->regfile_[rs1] & cpu->regfile_[rs2]; //rd = rs1 & rs2
+				case 0x7: { //AND/REMU
+					switch (funct7) {
+						case 0x0: { //AND
+							cpu->regfile_[rd] = cpu->regfile_[rs1] & cpu->regfile_[rs2]; //rd = rs1 & rs2
+							break;
+						}
+						case 0x1: { //REMU
+
+							break;
+						}
+						default: break;
+					}
 					break;
 				}
 				default: break;
@@ -247,7 +313,7 @@ void CPU_execute(CPU* cpu) {
 			if (rd != 0)
 				switch (funct3) {
 				case 0x0: { //LB
-					cpu->regfile_[rd] = (int32_t)(int8_t) cpu->data_mem_[cpu->regfile_[rs1] + imm];
+					cpu->regfile_[rd] = (int32_t)(int8_t)(cpu->data_mem_[cpu->regfile_[rs1] + imm]);
 					break;
 				}
 				case 0x1: { //LH
