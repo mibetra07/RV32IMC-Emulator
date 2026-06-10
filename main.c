@@ -124,21 +124,23 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //MUL
-
+							cpu->regfile_[rd] = (uint32_t)(((int64_t)(int32_t)cpu->regfile_[rs1] *
+															(int64_t)(int32_t)cpu->regfile[rs2]));
 							break;
 						}
 						default: break;
 					}
 					break;
 				}
-				case 0x1: { //SLL/MUL
+				case 0x1: { //SLL/MULH
 					switch (funct7) {
 						case 0x0: { //SLL
 							cpu->regfile_[rd] = cpu->regfile_[rs1] << (cpu->regfile_[rs2] & 0x1F); //schreibe rs1 << rs2(unterste 5 bits) in rd
 							break;
 						}
 						case 0x1: { //MULH
-
+							cpu->regfile_[rd] = ((int64_t)(int32_t)(cpu->regfile_[rs1]) *
+												 (int64_t)(int32_t)(cpu->regfile_[rs2])) >> 32;
 							break;
 						}
 						default: break;
@@ -148,14 +150,14 @@ void CPU_execute(CPU* cpu) {
 				case 0x2: { //SLT/MULHSU
 					switch (funct7) {
 						case 0x0: { //SLT
-							if ((int32_t)(cpu->regfile_[rs1]) < (int32_t)(cpu->regfile_[rs2])) //if rs1 < rs2 (signed)
+							if ((int32_t)cpu->regfile_[rs1] < (int32_t)cpu->regfile_[rs2]) //if rs1 < rs2 (signed)
 								cpu->regfile_[rd] = 0x1; //rd=1
 							else
 								cpu->regfile_[rd] = 0x0; //rd=0
 							break;
 						}
 						case 0x1: { //MULHSU
-
+							cpu->regfile_[rd] = ((int64_t)(int32_t)cpu->regfile_[rs1] * (uint64_t)cpu->regfile_[rs2]) >> 32;
 							break;
 						}
 						default: break;
@@ -172,7 +174,8 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //MULHU
-
+							cpu->regfile_[rd] = ((uint64_t)cpu->regfile_[rs1] * (uint64_t)cpu->regfile_[rs2]) >> 32;
+							break;
 						}
 						default: break;
 					}
@@ -185,7 +188,12 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //DIV
-
+							if (cpu->regfile_[rs2] == 0) //cant divide by 0
+								cpu->regfile_[rd] = 0xFFFFFFFF; //fill with 1s
+							else if ((int32_t)cpu->regfile_[rs1] == INT32_MIN && (int32_t)cpu->regfile_[rs2] == -1) //Integer overflow
+								cpu->regfile_[rd] = 0x80000000;
+							else
+								cpu->regfile_[rd] = (int32_t)cpu->regfile_[rs1] / (int32_t)cpu->regfile_[rs2]; //signed division
 						}
 						default: break;
 					}
@@ -202,7 +210,10 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //DIVU
-
+							if (cpu->regfile_[rs2] == 0) //cant divide by 0
+								cpu->regfile_[rd] = 0xFFFFFFFF; //fill with 1s
+							else
+								cpu->regfile_[rd] = cpu->regfile_[rs1] / cpu->regfile_[rs2]; //unsigned division
 							break;
 						}
 						default: break;
@@ -216,7 +227,12 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //REM
-
+							if (cpu->regfile_[rs2] == 0) //cant divide by 0
+								cpu->regfile_[rd] = cpu->regfile_[rs1];
+							else if ((int32_t)cpu->regfile_[rs1] == INT32_MIN && (int32_t)cpu->regfile_[rs2] == -1) //Integer overflow
+								cpu->regfile_[rd] = 0;
+							else
+								cpu->regfile_[rd] = (int32_t)cpu->regfile_[rs1] % (int32_t)cpu->regfile_[rs2]; //signed modulo
 							break;
 						}
 						default: break;
@@ -230,7 +246,10 @@ void CPU_execute(CPU* cpu) {
 							break;
 						}
 						case 0x1: { //REMU
-
+							if (cpu->regfile_[rs2] == 0) //cant divide by 0
+								cpu->regfile_[rd] = cpu->regfile_[rs1];
+							else
+								cpu->regfile_[rd] = cpu->regfile_[rs1] % cpu->regfile_[rs2]; //unsigned modulo
 							break;
 						}
 						default: break;
