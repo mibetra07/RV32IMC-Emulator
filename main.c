@@ -74,7 +74,6 @@ void CPU_load_data_mem(CPU* cpu, const char* filename) {
 	return;
 }
 
-
 /**
  * Speichert ein Byte (Befehl SB) -- VORGEGEBEN, bitte nicht veraendern.
  *
@@ -93,6 +92,42 @@ void CPU_store_byte(CPU* cpu, uint32_t addr, uint8_t value) {
 	} else {
 		cpu->data_mem_[addr] = value;
 	}
+}
+
+/*
+* Expandiert einen 16-Bit-Compressed-Befehl in sein 32-Bit-
+* Aequivalent. Gibt 0 zurueck, falls der Befehl ungueltig ist.
+*/
+uint32_t expand_compressed(uint16_t c) {
+	uint8_t op = c & 0x3; // op[1:0] -> Quadrant
+	uint8_t funct3 = (c >> 13) & 0x7; // funct3 ueber alle Quadranten
+	switch (op) {
+		case 0x0: // Quadrant 0
+			switch (funct3) {
+			case 0x0: // C.ADDI4SPN -> addi rd’, x2, nzuimm
+					// TODO: Immediate gemaess CIW-Format extrahieren
+					// TODO: rd’ = ((c >> 2) & 0x7) + 8
+					// TODO: 32-Bit ADDI-Befehl zusammensetzen
+					return /* ... */;
+			case 0x2: // C.LW
+					// TODO
+					return /* ... */;
+			case 0x6: // C.SW
+					// TODO
+					return /* ... */;
+			}
+			break;
+		case 0x1: // Quadrant 1
+			// TODO: C.NOP, C.ADDI, C.JAL, C.LI, C.ADDI16SP, C.LUI,
+			// C.SRLI, C.SRAI, C.ANDI, C.SUB, C.XOR, C.OR,
+			// C.AND, C.J, C.BEQZ, C.BNEZ
+			break;
+		case 0x2: // Quadrant 2
+			// TODO: C.SLLI, C.LWSP, C.JR, C.MV, C.EBREAK, C.JALR,
+			// C.ADD, C.SWSP
+			break;
+	}
+	return 0; // Ungueltige Instruktion
 }
 
 /**
