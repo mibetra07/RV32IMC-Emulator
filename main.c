@@ -125,7 +125,7 @@ void CPU_execute(CPU* cpu) {
 						}
 						case 0x1: { //MUL
 							cpu->regfile_[rd] = (uint32_t)(((int64_t)(int32_t)cpu->regfile_[rs1] *
-															(int64_t)(int32_t)cpu->regfile[rs2]));
+															(int64_t)(int32_t)cpu->regfile_[rs2]));
 							break;
 						}
 						default: break;
