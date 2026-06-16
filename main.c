@@ -227,8 +227,18 @@ uint32_t expand_compressed(uint16_t c) {
  * Instruction fetch Instruction decode, Execute, Memory access, Write back
  */
 void CPU_execute(CPU* cpu) {
-
-	uint32_t instruction = *(uint32_t*)(cpu->instr_mem_ + (cpu->pc_  & 0xFFFFF));
+	uint16_t lower = *(uint16_t *)(cpu->instr_mem_ + cpu->pc_);
+	uint32_t instruction;
+	int length;
+	if ((lower & 0x3) == 0x3) {
+		/* 32-Bit-Befehl */
+		instruction = *(uint32_t*)(cpu->instr_mem_ + (cpu->pc_  & 0xFFFFF));
+		length = 4;
+	} else {
+		/* 16-Bit-Befehl: expandieren */
+		instruction = expand_compressed(lower);
+		length = 2;
+	}
 	uint32_t opcode = instruction & 0x7F;
 
 	switch (opcode) {
@@ -386,7 +396,7 @@ void CPU_execute(CPU* cpu) {
 				}
 				default: break;
 				}
-			cpu->pc_ += 4;
+			cpu->pc_ += length;
 			break;
 		}
 		case 0x13: { //(I-Format)
@@ -449,7 +459,7 @@ void CPU_execute(CPU* cpu) {
 				default: break;
 				}
 
-			cpu->pc_ += 4; //zur nächsten instruction springen (4 byte -> pc+4)
+			cpu->pc_ += length; //zur nächsten instruction springen (4 byte -> pc+4)
 			break;
 		}
 		case 0x3: { //I-Format
@@ -481,7 +491,7 @@ void CPU_execute(CPU* cpu) {
 				}
 				default: break;
 				}
-			cpu->pc_ += 4;
+			cpu->pc_ += length;
 			break;
 		}
 		case 0x67: { //JALR (I-Format)
@@ -517,7 +527,7 @@ void CPU_execute(CPU* cpu) {
 				}
 				default: break;
 			}
-			cpu->pc_ += 4;
+			cpu->pc_ += length;
 			break;
 		}
 		case 0x63: { //(B-Format)
@@ -536,42 +546,42 @@ void CPU_execute(CPU* cpu) {
 					if (cpu->regfile_[rs1] == cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				case 0x1: { //BNE
 					if (cpu->regfile_[rs1] != cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				case 0x4: { //BLT
 					if ((int32_t)cpu->regfile_[rs1] < (int32_t)cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				case 0x5: { //BGE
 					if ((int32_t)cpu->regfile_[rs1] >= (int32_t)cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				case 0x6: { //BLTU
 					if (cpu->regfile_[rs1] < cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				case 0x7: { //BGEU
 					if (cpu->regfile_[rs1] >= cpu->regfile_[rs2])
 						cpu->pc_ += imm;
 					else
-						cpu->pc_ += 4;
+						cpu->pc_ += length;
 					break;
 				}
 				default: break;
@@ -582,14 +592,14 @@ void CPU_execute(CPU* cpu) {
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			if (rd != 0)
 				cpu->regfile_[rd] = instruction & 0xFFFFF000; //rd = upper 20 bits of imm
-			cpu->pc_ += 4;
+			cpu->pc_ += length;
 			break;
 		}
 		case 0x17: { // AUIPC (U-Format)
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + (instruction & 0xFFFFF000); //rd = pc + upper 20 bits of imm
-			cpu->pc_ += 4;
+			cpu->pc_ += length;
 			break;
 		}
 		case 0x6F: { //JAL (J-Format)
