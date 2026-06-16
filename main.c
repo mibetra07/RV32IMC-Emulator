@@ -106,24 +106,117 @@ uint32_t expand_compressed(uint16_t c) {
 			switch (funct3) {
 			case 0x0: // C.ADDI4SPN -> addi rd’, x2, nzuimm
 					// TODO: Immediate gemaess CIW-Format extrahieren
+
 					// TODO: rd’ = ((c >> 2) & 0x7) + 8
 					// TODO: 32-Bit ADDI-Befehl zusammensetzen
-					return /* ... */;
+					return;
 			case 0x2: // C.LW
-					// TODO
-					return /* ... */;
+
+					return;
 			case 0x6: // C.SW
-					// TODO
-					return /* ... */;
+
+					return;
+			default: return 0;
 			}
 			break;
 		case 0x1: // Quadrant 1
-			// TODO: C.NOP, C.ADDI, C.JAL, C.LI, C.ADDI16SP, C.LUI,
+			uint8_t funct2 = (c >> 10) & 0x3;
+			switch (funct3) {
+			case 0x0: { //(C.NOP/C.ADDI
+
+			}
+			case 0x1: { //C.JAL
+
+				return;
+			}
+			case 0x2: { //C.LI
+
+				return;
+			}
+			case 0x3: { //C.ADDI16SP/C.LUI
+
+				return;
+			}
+			case 0x4: {
+				switch (funct2) {
+					case 0x0: { //C.SRLI
+
+						return;
+					}
+					case 0x1: { //C.SRAI
+						return;
+					}
+					case 0x2: { //C.ANDI
+						return;
+					}
+					case 0x3: {
+						funct2 = (c >> 5) & 0x3;
+						switch (funct2) {
+							case 0x0: { //C.SUB
+
+								return;
+							}
+							case 0x1: { //C.XOR
+
+								return;
+							}
+							case 0x2: { //C.OR
+
+								return;
+							}
+							case 0x3: { //C.AND
+
+								return;
+							}
+							default: return 0;
+						}
+					}
+					default: return 0;
+				}
+				return;
+			}
+			case 0x5: {//C.J
+
+				return;
+			}
+			case 0x6: { //C.BEQZ
+
+				return;
+			}
+			case 0x7: { //C.BNEZ
+
+				return;
+			}
+			}
 			// C.SRLI, C.SRAI, C.ANDI, C.SUB, C.XOR, C.OR,
 			// C.AND, C.J, C.BEQZ, C.BNEZ
 			break;
 		case 0x2: // Quadrant 2
 			// TODO: C.SLLI, C.LWSP, C.JR, C.MV, C.EBREAK, C.JALR,
+			switch (funct3) {
+			case 0x0: { //C.SLLI
+
+				return;
+			}
+			case 0x2: { //C.LWSP
+
+				return;
+			}
+			case 0x4: {
+				if((c >> 12) & 0x1) { //C.EBREAK, C.JALR, C.ADD
+
+					return;
+				}
+				//C.JR, C.MV
+
+				return;
+			}
+			case 0x6: { //C.SWSP
+
+				return;
+			}
+			default: break;
+			}
 			// C.ADD, C.SWSP
 			break;
 	}
