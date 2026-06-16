@@ -120,6 +120,8 @@ uint32_t expand_compressed(uint16_t c) {
 										(((c >> 11) & 0x3) << 4) |
 										(((c >> 5) & 0x1) << 3) |
 										(((c >> 6) & 0x1) << 2);
+					if (nzuimm == 0)
+						return 0; //not allowed to be 0
 					uint32_t rd = ((c >> 2) & 0x7) + 8;
 					//create 32bit inst
 					//funct3=000 --> omitted
@@ -166,17 +168,19 @@ uint32_t expand_compressed(uint16_t c) {
 			switch (funct3) {
 				case 0x0: { //(C.NOP/C.ADDI
 					//no difference between NOP and ADDI
-					int32_t imm = sign_extend(
+					uint32_t nzimm = (uint32_t)sign_extend(
 											(((c >> 12) & 0x1) << 5) |
 											((c >> 2) & 0x1F)
 											, 6);
 					uint32_t rd = (c >> 7) & 0x1F;
+					if (nzimm == 0 || rd == 0)
+						return 0; //not allowed
 					//funct3=000 --> omitted
-					return (uint32_t)(
-							((uint32_t)imm << 20) | //imm
+					return	(uint32_t)(
+							(nzimm << 20) | //imm
 							(rd << 15) | //rs1=rd
 							(rd << 7) | //rd
-							(0x13)); //opcode ADDI
+							0x13); //opcode ADDI
 				}
 				case 0x1: { //C.JAL
 				uint32_t offset = (uint32_t)sign_extend(
@@ -189,21 +193,46 @@ uint32_t expand_compressed(uint16_t c) {
 										(((c >> 11) & 0x1) << 4) |
 										((c >> 3) & 0x7) << 1
 										, 12);
-					return (uint32_t)(
+					return	(uint32_t)(
 							((offset >> 20) << 31) | //imm start
 							(((offset >> 1) & 0x3FF) << 21) |
 							(((offset >> 11) & 0x1) << 20) |
 							(((offset >> 12) & 0xFF) << 12) | //imm end
 							(0x1 << 7) | //rd=1
-							(0x6F)); //opcode JAL
+							0x6F); //opcode JAL
 				}
 				case 0x2: { //C.LI
-
-					return;
+					uint32_t imm = (uint32_t)sign_extend(
+											(((c >> 12) & 0x1) << 5) |
+											((c >> 2) & 0x1F)
+											, 6);
+					uint32_t rd = (c >> 7) & 0x1F;
+					if (rd == 0)
+						return 0;
+					//funct3=000 --> omitted, rs1=x0 --> omitted
+					return	(uint32_t)(
+							(imm << 20) | //imm
+							(rd << 7) | //rd
+							0x13); //opcode ADDI
 				}
 				case 0x3: { //C.ADDI16SP/C.LUI
-
-					return;
+					uint32_t rd = (c >> 7) & 0x1F;
+					if (rd == 0x2) { //C.ADDI16SP
+						uint32_t nzimm = (uint32_t)sign_extend(
+															(((c >> 12) & 0x1) << 9) |
+															(((c >> 3) & 0x3) << 7) |
+															(((c >> 5) & 0x1) << 6) |
+															(((c >> 2) & 0x1) << 5) |
+															(((c >> 6) & 0x1) << 4)
+															, 10);
+						if (nzimm == 0)
+							return 0; //not allowed to be 0
+						return (uint32_t)(
+								(nzimm << 20) | //imm
+								(0x2 << 15) | //x2
+								(0x2 << 7) | //x2
+								0x13); //opcode ADDI
+					}
 				}
 				case 0x4: {
 					switch (funct2) {
