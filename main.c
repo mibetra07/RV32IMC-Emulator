@@ -173,8 +173,12 @@ uint32_t expand_compressed(uint16_t c) {
 											((c >> 2) & 0x1F)
 											, 6);
 					uint32_t rd = (c >> 7) & 0x1F;
+					
+					if (nzimm == 0 && rd == 0)
+						return 0x13; //NOP (ADDI x0, x0, 0)
 					if (nzimm == 0 || rd == 0)
 						return 0; //not allowed
+
 					//funct3=000 --> omitted
 					return	(uint32_t)(
 							(nzimm << 20) | //imm
