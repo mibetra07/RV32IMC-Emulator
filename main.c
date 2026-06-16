@@ -116,29 +116,47 @@ uint32_t expand_compressed(uint16_t c) {
 			switch (funct3) {
 				case 0x0: {
 					// C.ADDI4SPN
-					uint32_t nzuimm = (((c >> 7) & 0xF) << 6 |
-										((c >> 11) & 0x3) << 4 |
-										(c >> 5 & 0x1) << 3 |
-										(c >> 6) & 0x1) << 2;
+					uint32_t nzuimm =	(((c >> 7) & 0xF) << 6) |
+										(((c >> 11) & 0x3) << 4) |
+										(((c >> 5) & 0x1) << 3) |
+										(((c >> 6) & 0x1) << 2);
 					uint32_t rd = ((c >> 2) & 0x7) + 8;
 					//create 32bit inst
 					//funct3=000 --> omitted
-					return (uint32_t)(nzuimm << 20) | //imm
+					return	(uint32_t)(
+							(nzuimm << 20) | //imm
 							(0x2 << 15) | //R2
 							(rd << 7) | //rd
-							0x13; //opcode
+							(0x13)); //opcode ADDI
 				}
-				case 0x2: {
-					// C.LW
-
-					return;
+				case 0x2: { // C.LW
+					uint32_t uimm = (((c >> 5) & 0x1) << 6) |
+									(((c >> 10) & 0x7) << 3) |
+									(((c >> 6) & 0x1) << 2);
+					uint32_t rd = ((c >> 2) & 0x7) + 8;
+					uint32_t rs1 = ((c >>7) & 0x7) + 8;
+					return	(uint32_t)(
+							(uimm << 20) | //imm
+							(rs1 << 15) | //rs1
+							(0x2 << 12) | //funct3
+							(rd << 7) | //rd
+							(0x3)); //opcode LW
 				}
-				case 0x6: {
-					// C.SW
-
-					return;
+				case 0x6: { // C.SW
+					uint32_t uimm = (((c >> 5) & 0x1) << 6) |
+									(((c >> 10) & 0x7) << 3) |
+									(((c >> 6) & 0x1) << 2);
+					uint32_t rs2 = ((c >> 2) & 0x7) + 8;
+					uint32_t rs1 = ((c >>7) & 0x7) + 8;
+					return (uint32_t)(
+							((uimm >> 5) << 25) | //imm 11:5
+							(rs2 << 20) | //rs2
+							(rs1 << 15) | //rs1
+							(0x2 << 12) | //funct3
+							((uimm & 0x1F) << 7) | //imm 4:0
+							(0x23)); //opcode SW
 				}
-				default: return 0;
+				default: return 0; //invalid instruction
 			}
 			break;
 		}
@@ -147,11 +165,37 @@ uint32_t expand_compressed(uint16_t c) {
 			uint8_t funct2 = (c >> 10) & 0x3;
 			switch (funct3) {
 				case 0x0: { //(C.NOP/C.ADDI
-
+					//no difference between NOP and ADDI
+					int32_t imm = sign_extend(
+											(((c >> 12) & 0x1) << 5) |
+											((c >> 2) & 0x1F)
+											, 6);
+					uint32_t rd = (c >> 7) & 0x1F;
+					//funct3=000 --> omitted
+					return (uint32_t)(
+							((uint32_t)imm << 20) | //imm
+							(rd << 15) | //rs1=rd
+							(rd << 7) | //rd
+							(0x13)); //opcode ADDI
 				}
 				case 0x1: { //C.JAL
-
-					return;
+				uint32_t offset = (uint32_t)sign_extend(
+										(((c >> 12) & 0x1) << 11) |
+										(((c >> 8) & 0x1) << 10) |
+										(((c >> 9) & 0x3) << 8) |
+										(((c >> 6) & 0x1) << 7) |
+										(((c >> 7) & 0x1) << 6) |
+										(((c >> 2) & 0x1) << 5) |
+										(((c >> 11) & 0x1) << 4) |
+										((c >> 3) & 0x7) << 1
+										, 12);
+					return (uint32_t)(
+							((offset >> 20) << 31) | //imm start
+							(((offset >> 1) & 0x3FF) << 21) |
+							(((offset >> 11) & 0x1) << 20) |
+							(((offset >> 12) & 0xFF) << 12) | //imm end
+							(0x1 << 7) | //rd=1
+							(0x6F)); //opcode JAL
 				}
 				case 0x2: { //C.LI
 
