@@ -95,6 +95,15 @@ void CPU_store_byte(CPU* cpu, uint32_t addr, uint8_t value) {
 }
 
 /*
+* Erweitert einen n-Bit-Wert auf 32 Bit unter Beruecksichtigung
+* des Vorzeichens. Bit n-1 wird als Vorzeichenbit interpretiert.
+*/
+int32_t sign_extend(uint32_t value, int n) {
+	uint32_t mask = 1u << (n - 1);
+	return (int32_t)((value ^ mask) - mask);
+}
+
+/*
 * Expandiert einen 16-Bit-Compressed-Befehl in sein 32-Bit-
 * Aequivalent. Gibt 0 zurueck, falls der Befehl ungueltig ist.
 */
@@ -102,123 +111,138 @@ uint32_t expand_compressed(uint16_t c) {
 	uint8_t op = c & 0x3; // op[1:0] -> Quadrant
 	uint8_t funct3 = (c >> 13) & 0x7; // funct3 ueber alle Quadranten
 	switch (op) {
-		case 0x0: // Quadrant 0
+		case 0x0: {
+			// Quadrant 0
 			switch (funct3) {
-			case 0x0: // C.ADDI4SPN -> addi rd’, x2, nzuimm
-					// TODO: Immediate gemaess CIW-Format extrahieren
+				case 0x0: {
+					// C.ADDI4SPN
+					uint32_t nzuimm = (((c >> 7) & 0xF) << 6 |
+										((c >> 11) & 0x3) << 4 |
+										(c >> 5 & 0x1) << 3 |
+										(c >> 6) & 0x1) << 2;
+					uint32_t rd = ((c >> 2) & 0x7) + 8;
+					//create 32bit inst
+					//funct3=000 --> omitted
+					return (uint32_t)(nzuimm << 20) | //imm
+							(0x2 << 15) | //R2
+							(rd << 7) | //rd
+							0x13; //opcode
+				}
+				case 0x2: {
+					// C.LW
 
-					// TODO: rd’ = ((c >> 2) & 0x7) + 8
-					// TODO: 32-Bit ADDI-Befehl zusammensetzen
 					return;
-			case 0x2: // C.LW
+				}
+				case 0x6: {
+					// C.SW
 
 					return;
-			case 0x6: // C.SW
-
-					return;
-			default: return 0;
+				}
+				default: return 0;
 			}
 			break;
-		case 0x1: // Quadrant 1
+		}
+		case 0x1: {
+			// Quadrant 1
 			uint8_t funct2 = (c >> 10) & 0x3;
 			switch (funct3) {
-			case 0x0: { //(C.NOP/C.ADDI
+				case 0x0: { //(C.NOP/C.ADDI
 
-			}
-			case 0x1: { //C.JAL
-
-				return;
-			}
-			case 0x2: { //C.LI
-
-				return;
-			}
-			case 0x3: { //C.ADDI16SP/C.LUI
-
-				return;
-			}
-			case 0x4: {
-				switch (funct2) {
-					case 0x0: { //C.SRLI
-
-						return;
-					}
-					case 0x1: { //C.SRAI
-						return;
-					}
-					case 0x2: { //C.ANDI
-						return;
-					}
-					case 0x3: {
-						funct2 = (c >> 5) & 0x3;
-						switch (funct2) {
-							case 0x0: { //C.SUB
-
-								return;
-							}
-							case 0x1: { //C.XOR
-
-								return;
-							}
-							case 0x2: { //C.OR
-
-								return;
-							}
-							case 0x3: { //C.AND
-
-								return;
-							}
-							default: return 0;
-						}
-					}
-					default: return 0;
 				}
-				return;
-			}
-			case 0x5: {//C.J
-
-				return;
-			}
-			case 0x6: { //C.BEQZ
-
-				return;
-			}
-			case 0x7: { //C.BNEZ
-
-				return;
-			}
-			}
-			// C.SRLI, C.SRAI, C.ANDI, C.SUB, C.XOR, C.OR,
-			// C.AND, C.J, C.BEQZ, C.BNEZ
-			break;
-		case 0x2: // Quadrant 2
-			// TODO: C.SLLI, C.LWSP, C.JR, C.MV, C.EBREAK, C.JALR,
-			switch (funct3) {
-			case 0x0: { //C.SLLI
-
-				return;
-			}
-			case 0x2: { //C.LWSP
-
-				return;
-			}
-			case 0x4: {
-				if((c >> 12) & 0x1) { //C.EBREAK, C.JALR, C.ADD
+				case 0x1: { //C.JAL
 
 					return;
 				}
-				//C.JR, C.MV
+				case 0x2: { //C.LI
 
-				return;
-			}
-			case 0x6: { //C.SWSP
+					return;
+				}
+				case 0x3: { //C.ADDI16SP/C.LUI
 
-				return;
+					return;
+				}
+				case 0x4: {
+					switch (funct2) {
+						case 0x0: { //C.SRLI
+
+							return;
+						}
+						case 0x1: { //C.SRAI
+							return;
+						}
+						case 0x2: { //C.ANDI
+							return;
+						}
+						case 0x3: {
+							funct2 = (c >> 5) & 0x3;
+							switch (funct2) {
+								case 0x0: { //C.SUB
+
+									return;
+								}
+								case 0x1: { //C.XOR
+
+									return;
+								}
+								case 0x2: { //C.OR
+
+									return;
+								}
+								case 0x3: { //C.AND
+
+									return;
+								}
+								default: return 0;
+							}
+						}
+						default: return 0;
+					}
+					return;
+				}
+				case 0x5: {//C.J
+
+					return;
+				}
+				case 0x6: { //C.BEQZ
+
+					return;
+				}
+				case 0x7: { //C.BNEZ
+
+					return;
+				}
 			}
-			default: break;
+			break;
+		}
+		case 0x2: {
+			// Quadrant 2
+			switch (funct3) {
+				case 0x0: { //C.SLLI
+
+					return;
+				}
+				case 0x2: { //C.LWSP
+
+					return;
+				}
+				case 0x4: {
+					if((c >> 12) & 0x1) { //C.EBREAK, C.JALR, C.ADD
+
+						return;
+					}
+					//C.JR, C.MV
+
+					return;
+				}
+				case 0x6: { //C.SWSP
+
+					return;
+				}
+				default: break;
 			}
 			// C.ADD, C.SWSP
 			break;
+		}
 	}
 	return 0; // Ungueltige Instruktion
 }
@@ -227,7 +251,7 @@ uint32_t expand_compressed(uint16_t c) {
  * Instruction fetch Instruction decode, Execute, Memory access, Write back
  */
 void CPU_execute(CPU* cpu) {
-	uint16_t lower = *(uint16_t *)(cpu->instr_mem_ + cpu->pc_);
+	uint16_t lower = *(uint16_t *)(cpu->instr_mem_ + (cpu->pc_ & 0xFFFFF));
 	uint32_t instruction;
 	int length;
 	if ((lower & 0x3) == 0x3) {
