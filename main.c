@@ -289,7 +289,7 @@ uint32_t expand_compressed(uint16_t c) {
 									0x13); //opcode ANDI
 						}
 						case 0x3: {
-							funct2 = (c >> 5) & 0x3;
+							funct2 = (c >> 5) & 0x3; //different funct2
 							switch (funct2) {
 								case 0x0: { //C.SUB
 									uint32_t rd = ((c >> 7) & 0x7) + 8;
