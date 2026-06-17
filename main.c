@@ -160,7 +160,6 @@ uint32_t expand_compressed(uint16_t c) {
 				}
 				default: return 0; //invalid instruction
 			}
-			break;
 		}
 		case 0x1: {
 			// Quadrant 1
@@ -397,8 +396,8 @@ uint32_t expand_compressed(uint16_t c) {
 							(((offset >> 11) & 0x1) << 7) | //imm11
 							0x63); //opcode BNE
 				}
+				default: return 0;
 			}
-			break;
 		}
 		case 0x2: {
 			// Quadrant 2
@@ -484,12 +483,12 @@ uint32_t expand_compressed(uint16_t c) {
 							((uimm & 0x1F) << 7) | //imm4:0
 							0x23); //opcode SW
 				}
-				default: break;
+				default: return 0;
 			}
-			break;
 		}
+		default: return 0;
 	}
-	return 0; // Ungueltige Instruktion
+	return 0; // invalid instruction (unreachable)
 }
 
 /**
@@ -601,6 +600,7 @@ void CPU_execute(CPU* cpu) {
 								cpu->regfile_[rd] = 0x80000000;
 							else
 								cpu->regfile_[rd] = (int32_t)cpu->regfile_[rs1] / (int32_t)cpu->regfile_[rs2]; //signed division
+							break;
 						}
 						default: break;
 					}
