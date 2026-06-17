@@ -187,7 +187,7 @@ uint32_t expand_compressed(uint16_t c) {
 							0x13); //opcode ADDI
 				}
 				case 0x1: { //C.JAL
-				uint32_t offset = (uint32_t)sign_extend(
+					uint32_t offset = (uint32_t)sign_extend(
 										(((c >> 12) & 0x1) << 11) |
 										(((c >> 8) & 0x1) << 10) |
 										(((c >> 9) & 0x3) << 8) |
@@ -237,56 +237,165 @@ uint32_t expand_compressed(uint16_t c) {
 								(0x2 << 7) | //x2
 								0x13); //opcode ADDI
 					}
+					//C.LUI
+					uint32_t nzimm = (uint32_t)sign_extend(
+												(((c >> 12) & 0x1) << 17) |
+												(((c >> 2) & 0x1F) << 12)
+												, 18);
+					if (nzimm == 0 || rd == 0)
+						return 0; //not allowed
+					return (uint32_t)(
+						   (nzimm & 0xFFFFF000) | //imm 31:12
+						   (rd << 7) | //rd
+						   0x37); //opcode LUI
 				}
 				case 0x4: {
 					switch (funct2) {
 						case 0x0: { //C.SRLI
-
-							return;
+							uint32_t shamt = (c >> 2) & 0x1F; //bits 4:0
+							uint32_t rd = ((c >> 7) & 0x7) + 8;
+							//funct7=0000000 --> omitted
+							return	(uint32_t)(
+									(shamt << 20) | //shamt
+									(rd << 15) | //rs1=rd
+									(0x5 << 12) | //funct3=101
+									(rd << 7) | //rd
+									0x13); //opcode SRLI
 						}
 						case 0x1: { //C.SRAI
-							return;
+							uint32_t shamt = (c >> 2) & 0x1F; //bits 4:0
+							uint32_t rd = ((c >> 7) & 0x7) + 8;
+
+							return	(uint32_t)(
+									(0x20 << 25) | //funct7 = 0100000
+									(shamt << 20) | //shamt
+									(rd << 15) | //rs1=rd
+									(0x5 << 12) | //funct3=101
+									(rd << 7) | //rd
+									0x13); //opcode SRAI
 						}
 						case 0x2: { //C.ANDI
-							return;
+							uint32_t imm = (uint32_t)sign_extend(
+													(((c >> 12) & 0x1) << 5) |
+													((c >> 2) & 0x1F)
+													, 6);
+							uint32_t rd = ((c >> 7) & 0x7) + 8;
+
+							return	(uint32_t)(
+									(imm << 20) | //imm
+									(rd << 15) | //rs1=rd
+									(0x7 << 12) | //funct3=111
+									(rd << 7) | //rd
+									0x13); //opcode ANDI
 						}
 						case 0x3: {
 							funct2 = (c >> 5) & 0x3;
 							switch (funct2) {
 								case 0x0: { //C.SUB
-
-									return;
+									uint32_t rd = ((c >> 7) & 0x7) + 8;
+									uint32_t rs2 = ((c >> 2) & 0x7) + 8;
+									//funct3=000 --> omitted
+									return	(uint32_t)(
+											(0x20 << 25) | //funct7=0100000
+											(rs2 << 20) | //rs2
+											(rd << 15) | //rs1=rd
+											(rd << 7) | //rd
+											0x33); //opcode SUB
 								}
 								case 0x1: { //C.XOR
-
-									return;
+									uint32_t rd = ((c >> 7) & 0x7) + 8;
+									uint32_t rs2 = ((c >> 2) & 0x7) + 8;
+									//funct7=0000000 --> omitted
+									return	(uint32_t)(
+											(rs2 << 20) | //rs2
+											(rd << 15) | //rs1=rd
+											(0x4 << 12) | //funct3=100
+											(rd << 7) | //rd
+											0x33); //opcode XOR
 								}
 								case 0x2: { //C.OR
-
-									return;
+									uint32_t rd = ((c >> 7) & 0x7) + 8;
+									uint32_t rs2 = ((c >> 2) & 0x7) + 8;
+									//funct7=0000000 --> omitted
+									return	(uint32_t)(
+											(rs2 << 20) | //rs2
+											(rd << 15) | //rs1=rd
+											(0x6 << 12) | //funct3=110
+											(rd << 7) | //rd
+											0x33); //opcode OR
 								}
 								case 0x3: { //C.AND
-
-									return;
+									uint32_t rd = ((c >> 7) & 0x7) + 8;
+									uint32_t rs2 = ((c >> 2) & 0x7) + 8;
+									//funct7=0000000 --> omitted
+									return	(uint32_t)(
+											(rs2 << 20) | //rs2
+											(rd << 15) | //rs1=rd
+											(0x7 << 12) | //funct3=111
+											(rd << 7) | //rd
+											0x33); //opcode AND
 								}
 								default: return 0;
 							}
 						}
 						default: return 0;
 					}
-					return;
 				}
 				case 0x5: {//C.J
-
-					return;
+					uint32_t offset = (uint32_t)sign_extend(
+											(((c >> 12) & 0x1) << 11) |
+											(((c >> 8) & 0x1) << 10) |
+											(((c >> 9) & 0x3) << 8) |
+											(((c >> 6) & 0x1) << 7) |
+											(((c >> 7) & 0x1) << 6) |
+											(((c >> 2) & 0x1) << 5) |
+											(((c >> 11) & 0x1) << 4) |
+											((c >> 3) & 0x7) << 1
+											, 12);
+					//rd=0, omitted
+					return	(uint32_t)(
+							((offset >> 20) << 31) | //imm start
+							(((offset >> 1) & 0x3FF) << 21) |
+							(((offset >> 11) & 0x1) << 20) |
+							(((offset >> 12) & 0xFF) << 12) | //imm end
+							0x6F); //opcode JAL
 				}
 				case 0x6: { //C.BEQZ
-
-					return;
+					uint32_t offset = (uint32_t)sign_extend(
+									(((c >> 12) & 0x1) << 8) |
+									(((c >> 5) & 0x3) << 6) |
+									(((c >> 2) & 0x1) << 5) |
+									(((c >> 10) & 0x3) << 3) |
+									(((c >> 3) & 0x3) << 1)
+									, 9);
+					uint32_t rs1 = ((c >> 7) & 0x7) + 8;
+					//rs2 = 0 --> omitted, funct3 = 000 --> omitted
+					return	(uint32_t)(
+							((offset >> 12) << 31) | //imm12
+							(((offset >> 5) & 0x3F) << 25) | //imm10:5
+							(rs1 << 15) | //rs1
+							(((offset >> 1) & 0xF) << 8) | //imm4:1
+							(((offset >> 11) & 0x1) << 7) | //imm11
+							0x63); //opcode BEQ
 				}
 				case 0x7: { //C.BNEZ
-
-					return;
+					uint32_t offset = (uint32_t)sign_extend(
+									(((c >> 12) & 0x1) << 8) |
+									(((c >> 5) & 0x3) << 6) |
+									(((c >> 2) & 0x1) << 5) |
+									(((c >> 10) & 0x3) << 3) |
+									(((c >> 3) & 0x3) << 1)
+									, 9);
+					uint32_t rs1 = ((c >> 7) & 0x7) + 8;
+					//rs2 = 0 --> omitted
+					return	(uint32_t)(
+							((offset >> 12) << 31) | //imm12
+							(((offset >> 5) & 0x3F) << 25) | //imm10:5
+							(rs1 << 15) | //rs1
+							(0x1 << 12) | //funct3=001
+							(((offset >> 1) & 0xF) << 8) | //imm4:1
+							(((offset >> 11) & 0x1) << 7) | //imm11
+							0x63); //opcode BNE
 				}
 			}
 			break;
@@ -295,29 +404,88 @@ uint32_t expand_compressed(uint16_t c) {
 			// Quadrant 2
 			switch (funct3) {
 				case 0x0: { //C.SLLI
-
-					return;
+					uint32_t shamt = (c >> 2) & 0x1F; //bits 4:0
+					uint32_t rd = ((c >> 7) & 0x1F);
+					if (rd == 0)
+						return 0; //not allowed
+					//funct7=0000000 --> omitted
+					return	(uint32_t)(
+							(shamt << 20) | //shamt
+							(rd << 15) | //rs1=rd
+							(0x1 << 12) | //funct3=001
+							(rd << 7) | //rd
+							0x13); //opcode SLLI
 				}
 				case 0x2: { //C.LWSP
-
-					return;
+					uint32_t uimm = ((((c >> 2) & 0x3) << 6) |
+									(((c >> 12) & 0x1) << 5) |
+									(((c >> 4) & 0x3) << 2));
+					uint32_t rd = ((c >> 7) & 0x1F);
+					if (rd == 0)
+						return 0; //not allowed
+					return	(uint32_t)(
+							(uimm << 20) | //imm
+							(0x2 << 15) | //rs1=2
+							(0x2 << 12) | //funct3=010
+							(rd << 7) | //rd
+							0x3); //opcode LW
 				}
 				case 0x4: {
+					uint32_t rd_rs1 = (c >> 7) & 0x1F; //rd when C.MOV or C.ADD
+					uint32_t rs2 = (c >> 2) & 0x1F;
 					if((c >> 12) & 0x1) { //C.EBREAK, C.JALR, C.ADD
-
-						return;
+						if (rd_rs1 == 0 && rs2 == 0) //C.EBREAK
+							return 0;
+						if (rs2 == 0) { //C.JALR
+							//rd_rs1 cant be 0
+							//imm=0 --> omitted, funct3=0 --> omitted
+							return	(uint32_t)(
+									(rd_rs1 << 15) | //rs1
+									(0x1 << 7) | //rd=1
+									0x67); //opcode JALR
+						}
+						//C.ADD
+						//rs2 cant be 0
+						if (rd_rs1 == 0)
+							return 0;
+						//funct7=0 --> omitted, funct3=0 --> omitted
+						return	(uint32_t)(
+								(rs2 << 20) | //rs2
+								(rd_rs1 << 15) | //rs1
+								(rd_rs1 << 7) | //rd
+								0x33); //opcode ADD
 					}
 					//C.JR, C.MV
-
-					return;
+					if (rd_rs1 == 0)
+						return 0; //not allowed
+					if (rs2 == 0) { //C.JR
+						//rd_rs1 cant be 0
+						//rd=0 --> omitted
+						return	(uint32_t)(
+									(rd_rs1 << 15) | //rs1
+									0x67); //opcode JALR
+					}
+					//rd_rs1 and rs2 cant be 0
+					//rs1=0 --> omitted
+					return	(uint32_t)(
+							(rs2 << 20) | //rs2
+							(rd_rs1 << 7) | //rd
+							0x33); //opcode ADD
 				}
 				case 0x6: { //C.SWSP
-
-					return;
+					uint32_t uimm = ((((c >> 7) & 0x3) << 6) |
+									(((c >> 9) & 0xF) << 2));
+					uint32_t rs2 = ((c >> 2) & 0x1F);
+					return	(uint32_t)(
+							((uimm >> 5) << 25) | //imm11:5
+							(rs2 << 20) | //rs2
+							(0x2 << 15) | //rs1=2
+							(0x2 << 12) | //funct3=010
+							((uimm & 0x1F) << 7) | //imm4:0
+							0x23); //opcode SW
 				}
 				default: break;
 			}
-			// C.ADD, C.SWSP
 			break;
 		}
 	}
