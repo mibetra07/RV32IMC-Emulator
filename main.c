@@ -418,7 +418,7 @@ uint32_t expand_compressed(uint16_t c) {
 				case 0x2: { //C.LWSP
 					uint32_t uimm = ((((c >> 2) & 0x3) << 6) |
 									(((c >> 12) & 0x1) << 5) |
-									(((c >> 4) & 0x3) << 2));
+									(((c >> 4) & 0x7) << 2)); //Änderung 0x3 -> 0x7, testen
 					uint32_t rd = ((c >> 7) & 0x1F);
 					if (rd == 0)
 						return 0; //not allowed
