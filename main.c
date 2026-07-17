@@ -768,8 +768,8 @@ void CPU_execute(CPU* cpu) {
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
 			if (rd != 0)
-				cpu->regfile_[rd] = cpu->pc_ + 4;
-			cpu->pc_ = (cpu->regfile_[rs1] + imm);
+				cpu->regfile_[rd] = cpu->pc_ + length;
+			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1;
 			break;
 		}
 		case 0x23: { //(S-Format)
@@ -880,7 +880,7 @@ void CPU_execute(CPU* cpu) {
 							(((instruction >> 21) & 0x3FF) << 1); //imm 10:1
 			int32_t imm = (imm_u & 0x100000) ? (int32_t)(imm_u | 0xFFE00000) : (int32_t)imm_u; //signed conversion from 21 to 32 bit
 			if (rd != 0)
-				cpu->regfile_[rd] = cpu->pc_ + 4;
+				cpu->regfile_[rd] = cpu->pc_ + length;
 			cpu->pc_ += imm;
 			break;
 		}
