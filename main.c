@@ -495,21 +495,18 @@ uint32_t expand_compressed(uint16_t c) {
  * Instruction fetch Instruction decode, Execute, Memory access, Write back
  */
 void CPU_execute(CPU* cpu) {
-	/*uint16_t lower = *(uint16_t *)(cpu->instr_mem_ + (cpu->pc_ & 0xFFFFF));
+	uint16_t lower = *(uint16_t *)(cpu->instr_mem_ + (cpu->pc_ & 0xFFFFF));
 	uint32_t instruction;
 	int length;
 	if ((lower & 0x3) == 0x3) {
-		// 32-Bit-Befehl
+		/* 32-Bit-Befehl */
 		instruction = *(uint32_t*)(cpu->instr_mem_ + (cpu->pc_  & 0xFFFFF));
 		length = 4;
 	} else {
-		// 16-Bit-Befehl: expandieren
+		/* 16-Bit-Befehl: expandieren */
 		instruction = expand_compressed(lower);
 		length = 2;
 	}
-	*/
-	uint32_t instruction = *(uint32_t*)(cpu->instr_mem_ + (cpu->pc_  & 0xFFFFF));
-	int length = 4;
 	uint32_t opcode = instruction & 0x7F;
 
 	switch (opcode) {
