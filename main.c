@@ -898,7 +898,7 @@ int main(int argc, char* argv[]) {
 	CPU* cpu_inst;
 
 	cpu_inst = CPU_init(argv[1], argv[2]);
-    for(uint32_t i = 0; i <1000000; i++) { // Hauptschleife: fuehrt Befehle aus, bis die Obergrenze erreicht ist
+    for(uint32_t i = 0; i <10000000000; i++) { // Hauptschleife: fuehrt Befehle aus, bis die Obergrenze erreicht ist //1000000
     	CPU_execute(cpu_inst);
     }
 
