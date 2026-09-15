@@ -767,9 +767,10 @@ void CPU_execute(CPU* cpu) {
 			uint32_t rd = (instruction >> 7) & 0x1F; //register destination
 			uint32_t rs1 = (instruction >> 15) & 0x1F; //register source 1
 			int32_t imm = (int32_t)instruction >> 20; //signed conversion from 12 to 32 bit
+			uint32_t target = ((cpu->regfile_[rs1] + imm) & ~1); //calculate target address
 			if (rd != 0)
 				cpu->regfile_[rd] = cpu->pc_ + length;
-			cpu->pc_ = (cpu->regfile_[rs1] + imm) & ~1;
+			cpu->pc_ = target;
 			break;
 		}
 		case 0x23: { //(S-Format)
